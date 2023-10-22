@@ -11,6 +11,7 @@ fn main() -> Result<()> {
     let command = &args[3];
     let command_args = &args[4..];
 
+    // create temp dir
     let temp_dir = tempdir().context("create tempdir")?;
     let temp_dir = temp_dir.path();
 
@@ -21,6 +22,7 @@ fn main() -> Result<()> {
         command_path
     };
 
+    // copy bin to temp dir
     let bin_dest = temp_dir.join(&command_path);
     let bin_dir = temp_dir.join(&command_path);
     let bin_dir = bin_dir.parent().unwrap();
@@ -30,9 +32,17 @@ fn main() -> Result<()> {
     std::fs::copy(command, bin_dest).context("copy bin file")?;
     chroot(temp_dir).context("CHROOT CHROOT CHROOT")?;
     std::env::set_current_dir("/").context("set current dir to /")?;
+    // create dev null so stdout works (some bug or something)
     std::fs::create_dir_all("/dev").context("create /dev")?;
     std::fs::File::create("/dev/null").context("create /dev/null")?;
 
+    // create a new namespace
+    match unsafe {libc::unshare(libc::CLONE_NEWPID)} {
+        0 => {},
+        code => std::process::exit(code),
+    }
+
+    // run command
     let output = std::process::Command::new(command)
         .args(command_args)
         .stdout(Stdio::inherit())
