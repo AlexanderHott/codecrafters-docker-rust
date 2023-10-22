@@ -13,8 +13,8 @@ fn main() -> Result<()> {
     let command_args = &args[4..];
     let output = std::process::Command::new(command)
         .args(command_args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
         .output()
         .with_context(|| {
             format!(
